@@ -1,22 +1,79 @@
-name: 'Composite Run Steps Action Template'
+name: 'disable-f5-pool-member'
 
-description: 'Add description here'
+description: 'An action that will disable an F5 pool member in a specific pool once connections to the node = 0.'
 
 inputs:
-  input-1:
-    description: 'Add a description here'
+  ltm-host-name:
+    description: 'The hostname of the Local Traffic Manager (LTM)'
     required: true
-
-outputs:
-  output-1:
-    description: 'Add description here'
-    value: '${{ steps.step_1.outputs.world }}'
+  ltm-username:
+    description: 'Username of F5 LTM User'
+    required: true
+  ltm-password:
+    description: 'Password of F5 LTM User'
+    required: true
+  ltm-pool-name:
+    description: 'The pool to disable the member in'
+    required: true
+  current-host:
+    description: 'The hostname of the current machine being deployed'
+    required: true
+  max-wait-time:
+    description: 'Max Wait Time in seconds'
+    required: true
+    default: '300'
+  connection-count:
+    description: By default waits for no connections to be left on the node.  If a different threshold is specified, once the number of connections is reached, the API will kill the remaining connections.
+    required: true
+    default: '0'
 
 runs:
   using: 'composite'
+
   steps:
-    - name: Step 1
-      id: step_1
-      shell: bash
+    - name: Install iControlRest
+      shell: pwsh
       run: |
-        echo "::set-output name=hello::world"
+        # Make sure the F5 Module is not loaded
+        Remove-Module F5-LTM -ErrorAction SilentlyContinue
+
+        If ($null -eq (Get-InstalledModule -Name "F5-LTM" -ErrorAction SilentlyContinue)) {
+            Write-Host "Installing F5-LTM module..."
+            Install-Module -Name "F5-LTM" -Force
+            Write-Host "Finished installing F5-LTM module..."
+        }
+        Else {
+            Write-Host "F5-LTM module is already installed..."
+        }
+
+    - name: Load F5-LTM Powershell Module
+      shell: pwsh
+      run: Import-Module F5-LTM -Force -ErrorAction Stop
+
+    - name: Create an F5 session and disable the pool member
+      shell: pwsh
+      run: |
+        # Create LTM Credentials to use to login to the F5
+        $LTMCredentials = New-Object System.Management.Automation.PSCredential "${{ inputs.ltm-username }}", "${{ inputs.ltm-password }}"
+
+        #Create a session for connecting to the LTM
+        $F5Session = New-F5Session -LTMName "${{ inputs.ltm-host-name }}" -LTMCredentials $LTMCredentials -PassThru
+
+        # Gets the hostname of the current machine being deployed.
+        $curHost = "${{ inputs.current-host }}"
+
+        # Get Pool Name and Partition from Pool
+        $Pool = "${{ inputs.ltm-pool-name }}" 
+        $Partition = ($Pool.TrimStart("/")).Split("/")[0]
+        $PoolName = ($Pool.TrimStart("/")).Split("/")[1]
+
+        # Get pool member by using hostname from specified pool
+        $Member = (Get-PoolMember -PoolName $PoolName -Partition $Partition -F5Session $F5Session | Where {$_.Name -like "*$curHost*"} ).Name
+
+        Write-Host "Member is $Member"
+        Write-host "Currently deploying to $curhost"
+        Write-Host "Setting $curhost to Disabled in $Pool pool"
+        Disable-PoolMember -PoolName $PoolName -Partition $Partition -Name $Member -F5Session $F5Session
+
+        Write-Host "Waiting for connections to drain before deploying.  This could take a while...."
+        Wait-ConnectionCount -PoolName $PoolName -Member $Member -MaxWaitTime ${{ inputs.max-wait-time }} -ConnectionCount ${{ inputs.connection-count }}
