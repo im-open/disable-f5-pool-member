@@ -2,6 +2,8 @@
 
 An action that will enable an F5 pool member in a specific pool.
 
+## Index
+
 - [Inputs](#inputs)
 - [Outputs](#outputs)
 - [Example](#example)
