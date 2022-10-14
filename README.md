@@ -34,7 +34,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: im-open/disable-f5-pool-member@v1.0.1
+      - uses: im-open/disable-f5-pool-member@v1.0.2
         with:
           ltm-host-name: 'devlb.mycompany.com'
           ltm-username: 'operator-svc-dev'
