@@ -22,10 +22,6 @@ inputs:
     description: 'Max Wait Time in seconds'
     required: true
     default: '300'
-  connection-count:
-    description: By default waits for no connections to be left on the node.  If a different threshold is specified, once the number of connections is reached, the API will kill the remaining connections.
-    required: true
-    default: '0'
 
 runs:
   using: 'composite'
