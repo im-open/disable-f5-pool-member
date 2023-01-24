@@ -22,10 +22,6 @@ inputs:
     description: 'Max Wait Time in seconds'
     required: true
     default: '300'
-  connection-count:
-    description: By default waits for no connections to be left on the node.  If a different threshold is specified, once the number of connections is reached, the API will kill the remaining connections.
-    required: true
-    default: '0'
 
 runs:
   using: 'composite'
@@ -54,13 +50,17 @@ runs:
       shell: pwsh
       run: |
         # Create LTM Credentials to use to login to the F5
-        $LTMCredentials = New-Object System.Management.Automation.PSCredential "${{ inputs.ltm-username }}", "${{ inputs.ltm-password }}"
+        $LTMUsername = "${{ inputs.ltm-username }}"
+        $LTMPassword = '${{ inputs.ltm-password }}'
+        $LTMSecurePassword = ConvertTo-SecureString $LTMPassword -AsPlainText -Force
+        $LTMCredentials = New-Object System.Management.Automation.PSCredential ($LTMUsername,$LTMSecurePassword)
 
         #Create a session for connecting to the LTM
         $F5Session = New-F5Session -LTMName "${{ inputs.ltm-host-name }}" -LTMCredentials $LTMCredentials -PassThru
 
         # Gets the hostname of the current machine being deployed.
         $curHost = "${{ inputs.current-host }}"
+        $curHostName = $curHost.split('.')[0]
 
         # Get Pool Name and Partition from Pool
         $Pool = "${{ inputs.ltm-pool-name }}" 
@@ -68,12 +68,12 @@ runs:
         $PoolName = ($Pool.TrimStart("/")).Split("/")[1]
 
         # Get pool member by using hostname from specified pool
-        $Member = (Get-PoolMember -PoolName $PoolName -Partition $Partition -F5Session $F5Session | Where {$_.Name -like "*$curHost*"} ).Name
+        $Member = (Get-PoolMember -PoolName $PoolName -Partition $Partition -F5Session $F5Session | Where {$_.Name -like "*$curHostName*"} ).Name
 
         Write-Host "Member is $Member"
-        Write-host "Currently deploying to $curhost"
-        Write-Host "Setting $curhost to Disabled in $Pool pool"
+        Write-host "Currently deploying to $curHostName"
+        Write-Host "Setting $curHostName to Disabled in $Pool pool"
         Disable-PoolMember -PoolName $PoolName -Partition $Partition -Name $Member -F5Session $F5Session
 
         Write-Host "Waiting for connections to drain before deploying.  This could take a while...."
-        Wait-ConnectionCount -PoolName $PoolName -Member $Member -MaxWaitTime ${{ inputs.max-wait-time }} -ConnectionCount ${{ inputs.connection-count }}
+        Start-Sleep -s ${{ inputs.max-wait-time }}
