@@ -22,7 +22,7 @@ An action that will enable an F5 pool member in a specific pool.
 | `ltm-pool-name`    | true        | N/A     | The pool to disable the member in                                                                                                                                                                      |
 | `current-host`     | true        | N/A     | The hostname of the current machine being deployed                                                                                                                                                     |
 | `max-wait-time`    | true        | 300     | Max Wait Time in seconds                                                                                                                                                                               |
-| `connection-count` | true        | 0       | By default the action waits for no connections to be left on the node.  If a different threshold is specified, once the number of connections is reached, the API will kill the remaining connections. |
+
 
 ## Outputs
 No Outputs
@@ -34,7 +34,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: im-open/disable-f5-pool-member@v1.0.2
+      - uses: im-open/disable-f5-pool-member@v1.0.3
         with:
           ltm-host-name: 'devlb.mycompany.com'
           ltm-username: 'operator-svc-dev'
@@ -42,7 +42,6 @@ jobs:
           ltm-pool-name: '/Dev/api.dev.mycompany.com.https.443'
           current-host: 'waq2-abcd'
           max-wait-time:  120
-          connection-count: 5
       
       - run: ./deploy.sh
 
