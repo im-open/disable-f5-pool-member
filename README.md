@@ -11,7 +11,7 @@ An action that will enable an F5 pool member in a specific pool.
   - [Incrementing the Version](#incrementing-the-version)
 - [Code of Conduct](#code-of-conduct)
 - [License](#license)
-   
+
 ## Inputs
 
 | Parameter          | Is Required | Default | Description                                                                                                                                                                                            |
@@ -23,8 +23,8 @@ An action that will enable an F5 pool member in a specific pool.
 | `current-host`     | true        | N/A     | The hostname of the current machine being deployed                                                                                                                                                     |
 | `max-wait-time`    | true        | 300     | Max Wait Time in seconds                                                                                                                                                                               |
 
-
 ## Outputs
+
 No Outputs
 
 ## Example
@@ -34,7 +34,8 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: im-open/disable-f5-pool-member@v1.0.3
+      # You may also reference the major or major.minor version
+      - uses: im-open/disable-f5-pool-member@v1.0.4
         with:
           ltm-host-name: 'devlb.mycompany.com'
           ltm-username: 'operator-svc-dev'
